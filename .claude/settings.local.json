@@ -5,7 +5,8 @@
       "WebFetch(domain:docs.rs)",
       "WebFetch(domain:github.com)",
       "Bash(nix develop:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
