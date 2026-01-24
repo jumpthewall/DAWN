@@ -79,10 +79,28 @@
             '';
           };
 
+          # IQUERY WASM plugin
+          iqueryPlugin = wasmCraneLib.buildPackage {
+            inherit src;
+            pname = "dawn_iquery";
+            version = "0.1.0";
+            cargoExtraArgs = "-p dawn_iquery";
+
+            CARGO_BUILD_TARGET = wasmTarget;
+
+            # WASM doesn't need linking
+            doCheck = false;
+
+            installPhaseCommand = ''
+              mkdir -p $out/lib
+              cp target/${wasmTarget}/release/dawn_iquery.wasm $out/lib/
+            '';
+          };
+
           # Bundle: proxy, tester, and all plugins
           bundle = pkgs.symlinkJoin {
             name = "dawn-bundle";
-            paths = [ packages.proxy packages.tester packages.doublerPlugin ];
+            paths = [ packages.proxy packages.tester packages.doublerPlugin packages.iqueryPlugin ];
           };
 
           # Full bundle as a zip file with binaries, plugins, and data
@@ -97,6 +115,7 @@
 
             # Copy WASM plugins
             cp ${packages.doublerPlugin}/lib/*.wasm dawn-bundle/lib/
+            cp ${packages.iqueryPlugin}/lib/*.wasm dawn-bundle/lib/
 
             # Copy data files
             cp -r ${./data}/* dawn-bundle/data/

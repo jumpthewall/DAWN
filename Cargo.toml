@@ -1,5 +1,5 @@
 [workspace]
-members = ["proxy", "plugins/doubler", "tester"]
+members = ["proxy", "plugins/doubler", "plugins/iquery", "tester"]
 resolver = "2"
 
 [workspace.package]
