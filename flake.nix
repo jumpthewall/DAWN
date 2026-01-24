@@ -49,6 +49,18 @@
             HOST_CC = "${pkgs.stdenv.cc}/bin/cc";
           };
 
+          # DAWN tester binary (static musl)
+          tester = proxyCraneLib.buildPackage {
+            inherit nativeBuildInputs src;
+            pname = "dawn-tester";
+            version = "0.1.0";
+            cargoExtraArgs = "-p dawn_tester";
+
+            CARGO_BUILD_TARGET = muslTarget;
+            CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
+            HOST_CC = "${pkgs.stdenv.cc}/bin/cc";
+          };
+
           # Doubler WASM plugin
           doublerPlugin = wasmCraneLib.buildPackage {
             inherit src;
@@ -67,11 +79,32 @@
             '';
           };
 
-          # Bundle: proxy and all plugins
+          # Bundle: proxy, tester, and all plugins
           bundle = pkgs.symlinkJoin {
             name = "dawn-bundle";
-            paths = [ packages.proxy packages.doublerPlugin ];
+            paths = [ packages.proxy packages.tester packages.doublerPlugin ];
           };
+
+          # Full bundle as a zip file with binaries, plugins, and data
+          fullBundle = pkgs.runCommand "dawn-full-bundle" {
+            nativeBuildInputs = [ pkgs.zip ];
+          } ''
+            mkdir -p $out dawn-bundle/bin dawn-bundle/lib dawn-bundle/data
+
+            # Copy binaries
+            cp ${packages.proxy}/bin/dawn dawn-bundle/bin/
+            cp ${packages.tester}/bin/dawn-tester dawn-bundle/bin/
+
+            # Copy WASM plugins
+            cp ${packages.doublerPlugin}/lib/*.wasm dawn-bundle/lib/
+
+            # Copy data files
+            cp -r ${./data}/* dawn-bundle/data/
+
+            # Create zip
+            cd dawn-bundle
+            zip -r $out/dawn-bundle.zip .
+          '';
 
           default = packages.bundle;
         };

@@ -1,0 +1,18 @@
+[package]
+name = "dawn_tester"
+version.workspace = true
+edition = "2021"
+
+[[bin]]
+name = "dawn-tester"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+wasmtime = "29"
+hickory-resolver = "0.24"
+hickory-proto = "0.24"
+colored = "2"
+rand = "0.8"
