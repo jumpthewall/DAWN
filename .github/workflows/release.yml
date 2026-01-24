@@ -1,0 +1,93 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for changelog generation
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Build full bundle
+        run: nix build .#fullBundle
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get the previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          if [ -z "$PREV_TAG" ]; then
+            # No previous tag, get all commits
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" HEAD)
+          else
+            # Get commits since previous tag
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" ${PREV_TAG}..HEAD)
+          fi
+
+          # Write to file to handle multiline
+          echo "$CHANGELOG" > changelog.txt
+
+          # Also output for the release body
+          {
+            echo 'CHANGELOG<<EOF'
+            echo "$CHANGELOG"
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
+
+      - name: Rename bundle with version
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          cp result/dawn-bundle.zip dawn-bundle-${VERSION}.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: DAWN ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## Changes
+
+            ${{ steps.changelog.outputs.CHANGELOG }}
+
+            ## Downloads
+
+            - `dawn-bundle-${{ steps.version.outputs.VERSION }}.zip` - Complete bundle with binaries, plugins, and data files
+
+            ### Bundle Contents
+
+            ```
+            dawn-bundle/
+            ├── bin/
+            │   ├── dawn           # DNS proxy with WASM plugin support
+            │   └── dawn-tester    # Censorship detection tester
+            ├── data/
+            │   ├── censored.txt   # Domain list for testing
+            │   ├── forged.ipv4    # Known forged IPv4 addresses
+            │   └── forged.ipv6    # Known forged IPv6 addresses
+            └── lib/
+                └── dawn_doubler.wasm  # Question doubling plugin
+            ```
+          files: |
+            dawn-bundle-${{ steps.version.outputs.VERSION }}.zip
+          draft: false
+          prerelease: false
