@@ -1,21 +1,45 @@
-mod doubler;
+mod wasm_worker;
 
 use anyhow::Result;
+use clap::Parser;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::UdpSocket;
+use wasm_worker::WasmWorker;
 
-const LISTEN_ADDR: &str = "127.0.0.1:1053";
-const UPSTREAM_DNS: &str = "8.8.8.8:53";
 const MAX_DNS_PACKET_SIZE: usize = 512;
+
+#[derive(Parser, Debug)]
+#[command(name = "dawn")]
+#[command(about = "DNS Anti-censorship WebAssembly Nexus - A DNS proxy with pluggable WASM transforms")]
+struct Args {
+    /// Path to the WASM plugin module
+    #[arg(long)]
+    plugin: String,
+
+    /// Address to listen on
+    #[arg(long, default_value = "127.0.0.1:1053")]
+    listen: String,
+
+    /// Upstream DNS server
+    #[arg(long, default_value = "8.8.8.8:53")]
+    upstream: String,
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    println!("DNS Doubler starting...");
-    println!("Listening on: {}", LISTEN_ADDR);
-    println!("Upstream DNS: {}", UPSTREAM_DNS);
+    let args = Args::parse();
 
-    let socket = UdpSocket::bind(LISTEN_ADDR).await?;
+    println!("DAWN starting...");
+    println!("  Plugin: {}", args.plugin);
+    println!("  Listen: {}", args.listen);
+    println!("  Upstream: {}", args.upstream);
+
+    // Spawn WASM worker
+    let worker = WasmWorker::new(&args.plugin)?;
+    let worker = Arc::new(worker);
+
+    let socket = UdpSocket::bind(&args.listen).await?;
     let socket = Arc::new(socket);
 
     println!("Ready to receive queries");
@@ -26,9 +50,11 @@ async fn main() -> Result<()> {
         let (len, client_addr) = socket.recv_from(&mut buf).await?;
         let query = buf[..len].to_vec();
         let socket_clone = Arc::clone(&socket);
+        let worker_clone = Arc::clone(&worker);
+        let upstream = args.upstream.clone();
 
         tokio::spawn(async move {
-            if let Err(e) = handle_query(socket_clone, query, client_addr).await {
+            if let Err(e) = handle_query(socket_clone, worker_clone, query, client_addr, &upstream).await {
                 eprintln!("Error handling query from {}: {}", client_addr, e);
             }
         });
@@ -37,15 +63,17 @@ async fn main() -> Result<()> {
 
 async fn handle_query(
     socket: Arc<UdpSocket>,
+    worker: Arc<WasmWorker>,
     query: Vec<u8>,
     client_addr: SocketAddr,
+    upstream: &str,
 ) -> Result<()> {
-    // Duplicate questions if this is an A/AAAA/CNAME query
-    let modified_query = match doubler::duplicate_questions(&query) {
+    // Transform the query using the WASM plugin
+    let modified_query = match worker.transform(&query).await {
         Ok(q) => {
             if q.len() != query.len() {
                 println!(
-                    "Query from {}: duplicated questions ({} -> {} bytes)",
+                    "Query from {}: transformed ({} -> {} bytes)",
                     client_addr,
                     query.len(),
                     q.len()
@@ -54,14 +82,14 @@ async fn handle_query(
             q
         }
         Err(e) => {
-            eprintln!("Failed to process query: {}, forwarding original", e);
+            eprintln!("Failed to transform query: {}, forwarding original", e);
             query
         }
     };
 
     // Create a new socket for upstream communication
     let upstream_socket = UdpSocket::bind("0.0.0.0:0").await?;
-    upstream_socket.connect(UPSTREAM_DNS).await?;
+    upstream_socket.connect(upstream).await?;
 
     // Forward the (possibly modified) query upstream
     upstream_socket.send(&modified_query).await?;

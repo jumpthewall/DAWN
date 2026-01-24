@@ -3,7 +3,9 @@
     "allow": [
       "WebSearch",
       "WebFetch(domain:docs.rs)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(nix develop:*)",
+      "Bash(git add:*)"
     ]
   }
 }

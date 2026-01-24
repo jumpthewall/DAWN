@@ -2,34 +2,113 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Overview
+
+DAWN (DNS Anti-censorship WebAssembly Nexus) is a DNS proxy that supports pluggable WASM modules for packet transformation. The goal is to democratize anti-censorship by letting anyone write efficient evasion techniques as portable WebAssembly plugins.
+
 ## Build Commands
 
-This project uses Nix flakes for building. The default build produces a statically-linked musl binary.
-
 ```bash
-# Build (produces static musl binary)
-nix build .#
+# Build everything (proxy + plugins)
+nix build .#bundle
 
-# Enter dev shell with full toolchain (rust-analyzer, clippy, rustfmt)
-nix develop
+# Build components separately
+nix build .#proxy          # Static musl binary
+nix build .#doublerPlugin  # WASM plugin
 
-# Run tests
-nix develop -c cargo test
+# Development
+nix develop                # Enter dev shell
+cargo test                 # Run all tests
+cargo build -p dawn_doubler --target wasm32-unknown-unknown --release
 
-# Run the server
-./result/bin/dns_doubler
+# Run
+./result/bin/dawn --plugin ./result/lib/dawn_doubler.wasm
 ```
 
 ## Architecture
 
-DNS Doubler is a DNS proxy that duplicates questions in DNS queries using compression pointers before forwarding upstream.
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        DAWN Proxy                           │
+│   UDP Socket ──→ Tokio Tasks ──→ WASM Worker Thread         │
+│        ↑              │                   │                 │
+│        └──── oneshot ←── mpsc ←── Wasmtime Runtime          │
+└─────────────────────────────────────────────────────────────┘
+```
 
-**Flow:** Client → localhost:1053 → Parse/Duplicate → 8.8.8.8:53 → Response → Client
+**Flow:** Client → dawn proxy → WASM transform → Upstream DNS → Response → Client
 
-**Files:**
-- `src/main.rs` - Async UDP server using tokio. Binds to 127.0.0.1:1053, spawns task per query, forwards to upstream DNS.
-- `src/doubler.rs` - Core logic for question duplication. Uses hickory-proto for parsing, then manually constructs wire-format packets with DNS compression pointers (0xC000 | offset).
+The proxy uses a dedicated std::thread for Wasmtime to avoid blocking the Tokio runtime. Communication happens via mpsc (requests) and oneshot (responses) channels.
 
-**Key constants:** `LISTEN_ADDR` (127.0.0.1:1053), `UPSTREAM_DNS` (8.8.8.8:53)
+## Directory Structure
 
-**Duplication logic:** Only A, AAAA, and CNAME queries are duplicated. Duplicates use compression pointers to reference original question names, adding 6 bytes per duplicate (2-byte pointer + 2-byte QTYPE + 2-byte QCLASS).
+```
+dawn/
+├── Cargo.toml              # Workspace root
+├── flake.nix               # Nix build (musl proxy + wasm plugins)
+├── proxy/
+│   ├── Cargo.toml          # deps: wasmtime, tokio, clap, anyhow
+│   └── src/
+│       ├── main.rs         # CLI parsing, UDP server, task spawning
+│       └── wasm_worker.rs  # Wasmtime host, channel handling
+└── plugins/
+    └── doubler/
+        ├── Cargo.toml      # crate-type = ["cdylib"], wee_alloc
+        └── src/
+            └── lib.rs      # #![no_std] plugin implementation
+```
+
+## Key Files
+
+### proxy/src/main.rs
+- Parses CLI args with clap (`--plugin`, `--listen`, `--upstream`)
+- Binds UDP socket, spawns task per incoming query
+- Calls `WasmWorker::transform()` for packet transformation
+- Forwards to upstream, returns response to client
+
+### proxy/src/wasm_worker.rs
+- `WasmWorker::new()` spawns a std::thread with Wasmtime
+- Loads WASM module, extracts `alloc`/`dealloc`/`transform` exports
+- `transform()` method sends request via mpsc, awaits oneshot response
+- Worker thread: allocates WASM memory, copies data, calls transform, reads result
+
+### plugins/doubler/src/lib.rs
+- `#![no_std]` with `wee_alloc` for minimal binary size
+- Exports `alloc`, `dealloc`, `transform` with C ABI
+- Duplicates A/AAAA/CNAME questions using DNS compression pointers
+- Pure byte manipulation, no external DNS parsing libraries
+
+## WASM Plugin ABI
+
+All plugins must export:
+
+```rust
+extern "C" fn alloc(size: u32) -> *mut u8;
+extern "C" fn dealloc(ptr: *mut u8, size: u32);
+extern "C" fn transform(
+    input_ptr: *const u8,
+    input_len: u32,
+    output_ptr: *mut u8,
+    output_capacity: u32
+) -> u32;  // Returns bytes written to output
+```
+
+**Memory protocol:**
+1. Host calls `alloc(input_len)` → gets input_ptr
+2. Host calls `alloc(output_capacity)` → gets output_ptr
+3. Host writes input data to input_ptr
+4. Host calls `transform(input_ptr, input_len, output_ptr, output_capacity)`
+5. Host reads output_len bytes from output_ptr
+6. Host calls `dealloc` for both buffers
+
+## Testing
+
+```bash
+# Unit tests
+cargo test
+
+# Manual integration test
+./result/bin/dawn --plugin ./result/lib/dawn_doubler.wasm &
+dig @127.0.0.1 -p 1053 example.com A
+# Should see "transformed" message in proxy output
+```

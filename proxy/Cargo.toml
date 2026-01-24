@@ -1,0 +1,15 @@
+[package]
+name = "dawn"
+version = "0.1.0"
+edition = "2021"
+description = "DNS Anti-censorship WebAssembly Nexus"
+
+[[bin]]
+name = "dawn"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+wasmtime = "29"
+clap = { version = "4", features = ["derive"] }
