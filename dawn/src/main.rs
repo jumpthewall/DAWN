@@ -1,3 +1,8 @@
+//! DAWN DNS proxy server.
+//!
+//! This binary implements a UDP DNS proxy that transforms queries using
+//! a WASM plugin before forwarding them to an upstream resolver.
+
 mod wasm_worker;
 
 use anyhow::Result;
@@ -7,6 +12,7 @@ use std::sync::Arc;
 use tokio::net::UdpSocket;
 use wasm_worker::WasmWorker;
 
+/// Maximum size of a DNS packet over UDP (standard limit).
 const MAX_DNS_PACKET_SIZE: usize = 512;
 
 #[derive(Parser, Debug)]
@@ -61,6 +67,10 @@ async fn main() -> Result<()> {
     }
 }
 
+/// Handles a single DNS query from a client.
+///
+/// Transforms the query using the WASM plugin, forwards it to the upstream
+/// resolver, and sends the response back to the client.
 async fn handle_query(
     socket: Arc<UdpSocket>,
     worker: Arc<WasmWorker>,

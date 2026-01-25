@@ -1,3 +1,8 @@
+//! DNS resolution testing for censorship detection.
+//!
+//! Provides functions to test domain resolution using both the system resolver
+//! and WASM plugin strategies, comparing results against known forged IPs.
+
 use anyhow::{anyhow, Result};
 use hickory_proto::op::{Message, MessageType, OpCode, Query};
 use hickory_proto::rr::{Name, RData, RecordType};
@@ -14,7 +19,10 @@ use tokio::time::timeout;
 use super::censorship::ForgedIps;
 use crate::wasm_worker::WasmWorker;
 
+/// Timeout for DNS queries.
 const DNS_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// Maximum DNS packet size over UDP.
 const MAX_DNS_PACKET_SIZE: usize = 512;
 
 /// Result of a single DNS resolution attempt
@@ -41,10 +49,12 @@ pub struct TestResults {
 }
 
 impl TestResults {
+    /// Creates a new empty test results instance.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Records a single resolution result.
     pub fn record(&mut self, result: ResolutionResult) {
         self.total += 1;
         match result {
@@ -55,6 +65,7 @@ impl TestResults {
         }
     }
 
+    /// Returns the percentage of queries that were censored.
     pub fn censored_percentage(&self) -> f64 {
         if self.total == 0 {
             return 0.0;
@@ -62,6 +73,7 @@ impl TestResults {
         (self.censored as f64 / self.total as f64) * 100.0
     }
 
+    /// Returns the percentage of queries that were not censored.
     pub fn not_censored_percentage(&self) -> f64 {
         if self.total == 0 {
             return 0.0;

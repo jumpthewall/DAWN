@@ -1,3 +1,7 @@
+//! Common utilities for DAWN plugins.
+//!
+//! Provides memory allocation helpers and re-exports for building WASM plugins.
+
 pub use core::slice;
 pub use std::vec::Vec;
 

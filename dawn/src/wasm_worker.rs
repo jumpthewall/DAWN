@@ -1,7 +1,14 @@
+//! WASM plugin execution engine.
+//!
+//! Provides the [`WasmWorker`] type for loading and executing WASM transform plugins.
+
 use anyhow::{anyhow, Result};
 use wasmtime::{Engine, Instance, InstancePre, Linker, Module, Store};
 
-/// WASM worker using InstancePre for efficient parallel instantiation
+/// WASM worker using InstancePre for efficient parallel instantiation.
+///
+/// Pre-compiles the WASM module at construction time, allowing fast parallel
+/// instantiation for concurrent request handling.
 pub struct WasmWorker {
     engine: Engine,
     instance_pre: InstancePre<()>,
@@ -36,7 +43,10 @@ impl WasmWorker {
     }
 }
 
-/// Process a single transform request
+/// Processes a single transform request within a WASM instance.
+///
+/// Allocates input/output buffers in WASM memory, calls the plugin's transform
+/// function, and returns the transformed packet.
 fn process_transform(store: &mut Store<()>, instance: &Instance, input: &[u8]) -> Result<Vec<u8>> {
     let alloc = instance
         .get_typed_func::<u32, u32>(&mut *store, "alloc")

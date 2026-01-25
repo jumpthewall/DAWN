@@ -1,6 +1,11 @@
+//! IQUERY opcode plugin.
+//!
+//! Sets the IQUERY (inverse query) opcode in DNS headers. Some censors don't
+//! inspect packets with unusual opcodes.
+
 use dawn_plugin_common::slice;
 
-/// Allocate memory in WASM linear memory
+/// Allocates memory in WASM linear memory.
 #[no_mangle]
 pub extern "C" fn alloc(size: u32) -> *mut u8 {
     dawn_plugin_common::plugin_alloc(size)

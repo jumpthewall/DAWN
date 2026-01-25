@@ -1,6 +1,11 @@
+//! DNS question doubler plugin.
+//!
+//! Duplicates A, AAAA, and CNAME questions in DNS queries using compression
+//! pointers. This can confuse censors that only inspect the first question.
+
 use dawn_plugin_common::slice;
 
-/// Allocate memory in WASM linear memory
+/// Allocates memory in WASM linear memory.
 #[no_mangle]
 pub extern "C" fn alloc(size: u32) -> *mut u8 {
     dawn_plugin_common::plugin_alloc(size)

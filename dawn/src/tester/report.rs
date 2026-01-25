@@ -1,7 +1,11 @@
+//! Test report generation and display.
+//!
+//! Provides formatted console output for censorship test results.
+
 use super::resolver::TestResults;
 use colored::Colorize;
 
-/// Print the full test report
+/// Prints the full test report comparing all strategies.
 pub fn print_report(system_results: &TestResults, plugin_results: &[(&str, TestResults)]) {
     println!();
     println!("{}", "═".repeat(60).bold());

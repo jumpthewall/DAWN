@@ -1,3 +1,8 @@
+//! DAWN censorship tester binary.
+//!
+//! Tests DNS censorship detection and evaluates the effectiveness of
+//! WASM evasion plugins against a list of domains.
+
 use anyhow::{Context, Result};
 use clap::Parser;
 use colored::Colorize;

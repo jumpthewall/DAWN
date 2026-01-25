@@ -1,10 +1,15 @@
+//! Censorship detection via forged IP address matching.
+//!
+//! Provides utilities for loading and checking against known forged IP addresses
+//! used by DNS censorship systems.
+
 use anyhow::{Context, Result};
 use std::collections::HashSet;
 use std::fs;
 use std::net::IpAddr;
 use std::path::Path;
 
-/// Collection of known forged/censorship IP addresses
+/// Collection of known forged/censorship IP addresses.
 pub struct ForgedIps {
     pub ipv4: HashSet<IpAddr>,
     pub ipv6: HashSet<IpAddr>,

@@ -184,7 +184,7 @@ fn transform(...) -> u32 {
 
 ### Testing
 
-Use `#![cfg_attr(...)]` to support both WASM and native targets:
+Write tests as usual - they run on the native target, not WASM:
 
 ```rust
 #[cfg(test)]
@@ -202,9 +202,8 @@ mod tests {
 }
 ```
 
-Run tests with:
 ```bash
-cargo test  # Runs on native target, not WASM
+cargo test
 ```
 
 ### Binary Size
@@ -218,10 +217,10 @@ Typical plugin size: 10-30 KB.
 
 ### Debugging
 
-For development, you can print debug info (won't work in WASM):
+For development, use conditional compilation to add debug output that only runs during native tests:
 
 ```rust
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(test)]
 eprintln!("Debug: packet len = {}", input.len());
 ```
 
