@@ -5,6 +5,12 @@
 pub use core::slice;
 pub use std::vec::Vec;
 
+/// Maximum allowed allocation size in bytes for plugin_alloc.
+///
+/// This prevents excessively large or malicious allocation requests
+/// from exhausting memory.
+const MAX_ALLOC_SIZE: u32 = 16 * 1024 * 1024; // 16 MiB
+
 /// Allocate memory in WASM linear memory.
 ///
 /// Plugins should re-export this as:
@@ -15,6 +21,10 @@ pub use std::vec::Vec;
 /// }
 /// ```
 pub fn plugin_alloc(size: u32) -> *mut u8 {
+    if size == 0 || size > MAX_ALLOC_SIZE {
+        return core::ptr::null_mut();
+    }
+
     let mut buf = vec![0u8; size as usize];
     let ptr = buf.as_mut_ptr();
     core::mem::forget(buf);
