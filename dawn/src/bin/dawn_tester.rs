@@ -1,8 +1,3 @@
-mod censorship;
-mod report;
-mod resolver;
-mod wasm_worker;
-
 use anyhow::{Context, Result};
 use clap::Parser;
 use colored::Colorize;
@@ -11,10 +6,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 
-use censorship::{load_domains, ForgedIps};
-use report::{clear_progress, print_progress, print_report};
-use resolver::{test_plugin_resolver, test_system_resolver, TestResults};
-use wasm_worker::WasmWorker;
+use dawn::tester::censorship::{load_domains, ForgedIps};
+use dawn::tester::report::{clear_progress, print_progress, print_report};
+use dawn::tester::resolver::{test_plugin_resolver, test_system_resolver, TestResults};
+use dawn::wasm_worker::WasmWorker;
 
 #[derive(Parser, Debug)]
 #[command(name = "dawn-tester")]

@@ -4,12 +4,24 @@ version = "0.1.0"
 edition = "2021"
 description = "DNS Anti-censorship WebAssembly Nexus"
 
+[lib]
+name = "dawn"
+path = "src/lib.rs"
+
 [[bin]]
 name = "dawn"
 path = "src/main.rs"
+
+[[bin]]
+name = "dawn-tester"
+path = "src/bin/dawn_tester.rs"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 anyhow = "1"
 wasmtime = "29"
 clap = { version = "4", features = ["derive"] }
+hickory-resolver = "0.24"
+hickory-proto = "0.24"
+colored = "2"
+rand = "0.8"

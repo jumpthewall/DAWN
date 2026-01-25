@@ -11,7 +11,7 @@ use std::time::Duration;
 use tokio::net::UdpSocket;
 use tokio::time::timeout;
 
-use crate::censorship::ForgedIps;
+use super::censorship::ForgedIps;
 use crate::wasm_worker::WasmWorker;
 
 const DNS_TIMEOUT: Duration = Duration::from_secs(5);

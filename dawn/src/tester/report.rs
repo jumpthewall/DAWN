@@ -1,5 +1,5 @@
 use colored::Colorize;
-use crate::resolver::TestResults;
+use super::resolver::TestResults;
 
 /// Print the full test report
 pub fn print_report(

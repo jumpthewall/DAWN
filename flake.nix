@@ -64,14 +64,9 @@
       in
       rec {
         packages = {
-          # DAWN proxy binary 
+          # DAWN proxy and tester binaries
           dawn = buildPackage {
-            path = ./proxy;
-            nativeBuildInputs = with pkgs; [ pkg-config ];
-          };
-          # DAWN tester binary 
-          dawn_tester = buildPackage {
-            path = ./tester;
+            path = ./dawn;
             nativeBuildInputs = with pkgs; [ pkg-config ];
           };
 
@@ -79,7 +74,17 @@
           ## DNS Doubler
           doublerPlugin = buildPlugin ./plugins/doubler;
           ## Inverse query
-          iqueryPlugin = buildPlugin ./plugins/doubler;
+          iqueryPlugin = buildPlugin ./plugins/iquery;
+
+          # Test runner script that tests all plugins
+          test-all = pkgs.writeShellScriptBin "dawn-test-all" ''
+            exec ${packages.dawn}/bin/dawn-tester \
+              --plugins "${packages.doublerPlugin}/lib/dawn_doubler.wasm,${packages.iqueryPlugin}/lib/dawn_iquery.wasm" \
+              --domains "${./data}/censored.txt" \
+              --forged-ipv4 "${./data}/forged.ipv4" \
+              --forged-ipv6 "${./data}/forged.ipv6" \
+              "$@"
+          '';
 
           # Full bundle as a zip file with binaries, plugins, and data
           fullBundle = pkgs.runCommand "dawn-full-bundle"
@@ -90,7 +95,7 @@
 
             # Copy binaries
             cp ${packages.dawn}/bin/dawn dawn-bundle/bin/
-            cp ${packages.dawn_tester}/bin/dawn-tester dawn-bundle/bin/
+            cp ${packages.dawn}/bin/dawn-tester dawn-bundle/bin/
 
             # Copy WASM plugins
             cp ${packages.doublerPlugin}/lib/*.wasm dawn-bundle/lib/

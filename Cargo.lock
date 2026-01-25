@@ -423,6 +423,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "colored",
+ "hickory-proto",
+ "hickory-resolver",
+ "rand",
  "tokio",
  "wasmtime",
 ]
@@ -439,20 +443,6 @@ name = "dawn_iquery"
 version = "0.1.0"
 dependencies = [
  "wee_alloc",
-]
-
-[[package]]
-name = "dawn_tester"
-version = "0.1.2"
-dependencies = [
- "anyhow",
- "clap",
- "colored",
- "hickory-proto",
- "hickory-resolver",
- "rand",
- "tokio",
- "wasmtime",
 ]
 
 [[package]]

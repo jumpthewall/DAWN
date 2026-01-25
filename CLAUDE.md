@@ -9,11 +9,11 @@ DAWN (DNS Anti-censorship WebAssembly Nexus) is a DNS proxy that supports plugga
 ## Build Commands
 
 ```bash
-# Build everything (proxy + plugins)
-nix build .#bundle
+# Build everything (binaries + plugins)
+nix build .#fullBundle
 
 # Build components separately
-nix build .#proxy          # Static musl binary
+nix build .#dawn           # Static musl binary (proxy + tester)
 nix build .#doublerPlugin  # WASM plugin
 
 # Development
@@ -23,6 +23,7 @@ cargo build -p dawn_doubler --target wasm32-unknown-unknown --release
 
 # Run
 ./result/bin/dawn --plugin ./result/lib/dawn_doubler.wasm
+./result/bin/dawn-tester --plugins ./result/lib/dawn_doubler.wasm
 ```
 
 ## Architecture
@@ -43,34 +44,49 @@ The proxy uses a dedicated std::thread for Wasmtime to avoid blocking the Tokio 
 ## Directory Structure
 
 ```
-dawn/
+dns_doubler/
 ├── Cargo.toml              # Workspace root
-├── flake.nix               # Nix build (musl proxy + wasm plugins)
-├── proxy/
-│   ├── Cargo.toml          # deps: wasmtime, tokio, clap, anyhow
+├── flake.nix               # Nix build (musl binaries + wasm plugins)
+├── dawn/
+│   ├── Cargo.toml          # deps: wasmtime, tokio, clap, anyhow, hickory-*, colored, rand
 │   └── src/
 │       ├── main.rs         # CLI parsing, UDP server, task spawning
-│       └── wasm_worker.rs  # Wasmtime host, channel handling
+│       ├── lib.rs          # Library exports (wasm_worker, tester)
+│       ├── wasm_worker.rs  # Wasmtime host, InstancePre-based parallelism
+│       ├── bin/
+│       │   └── dawn_tester.rs  # Tester binary entry point
+│       └── tester/
+│           ├── mod.rs      # Tester module exports
+│           ├── censorship.rs   # Forged IP management
+│           ├── resolver.rs     # DNS resolution testing
+│           └── report.rs       # Test reporting
 └── plugins/
-    └── doubler/
+    ├── doubler/
+    │   ├── Cargo.toml      # crate-type = ["cdylib"], wee_alloc
+    │   └── src/lib.rs      # #![no_std] doubler plugin
+    └── iquery/
         ├── Cargo.toml      # crate-type = ["cdylib"], wee_alloc
-        └── src/
-            └── lib.rs      # #![no_std] plugin implementation
+        └── src/lib.rs      # #![no_std] iquery plugin
 ```
 
 ## Key Files
 
-### proxy/src/main.rs
+### dawn/src/main.rs
 - Parses CLI args with clap (`--plugin`, `--listen`, `--upstream`)
 - Binds UDP socket, spawns task per incoming query
 - Calls `WasmWorker::transform()` for packet transformation
 - Forwards to upstream, returns response to client
 
-### proxy/src/wasm_worker.rs
-- `WasmWorker::new()` spawns a std::thread with Wasmtime
-- Loads WASM module, extracts `alloc`/`dealloc`/`transform` exports
-- `transform()` method sends request via mpsc, awaits oneshot response
-- Worker thread: allocates WASM memory, copies data, calls transform, reads result
+### dawn/src/wasm_worker.rs
+- `WasmWorker::new()` loads WASM module with Wasmtime InstancePre
+- Exports `alloc`/`dealloc`/`transform` functions
+- `transform()` uses spawn_blocking for parallel WASM execution
+- Shared between proxy and tester binaries
+
+### dawn/src/bin/dawn_tester.rs
+- Tests DNS censorship detection and evasion effectiveness
+- Compares system resolver against WASM plugin strategies
+- Uses `dawn::tester` and `dawn::wasm_worker` modules
 
 ### plugins/doubler/src/lib.rs
 - `#![no_std]` with `wee_alloc` for minimal binary size
