@@ -90,13 +90,35 @@ cargo build -p dawn_doubler --target wasm32-unknown-unknown --release
 
 ## CLI Reference
 
+### dawn
+
 ```
-dawn --plugin <path> [--listen <addr>] [--upstream <addr>]
+DNS Anti-censorship WebAssembly Nexus - A DNS proxy with pluggable WASM transforms
+
+Usage: dawn [OPTIONS] --plugin <PLUGIN>
 
 Options:
-  --plugin <path>      Path to WASM plugin module (required)
-  --listen <addr>      Listen address [default: 127.0.0.1:1053]
-  --upstream <addr>    Upstream DNS server [default: 8.8.8.8:53]
+      --plugin <PLUGIN>      Path to the WASM plugin module
+      --listen <LISTEN>      Address to listen on [default: 127.0.0.1:1053]
+      --upstream <UPSTREAM>  Upstream DNS server [default: 8.8.8.8:53]
+  -h, --help                 Print help
+```
+
+### dawn-tester
+
+```
+Test DNS censorship detection and evasion effectiveness
+
+Usage: dawn-tester [OPTIONS]
+
+Options:
+      --plugins <PLUGINS>          Comma-separated WASM plugin paths
+      --domains <DOMAINS>          Domain list file [default: data/censored.txt]
+      --forged-ipv4 <FORGED_IPV4>  Forged IPv4 addresses file [default: data/forged.ipv4]
+      --forged-ipv6 <FORGED_IPV6>  Forged IPv6 addresses file [default: data/forged.ipv6]
+      --upstream <UPSTREAM>        Upstream DNS server [default: 8.8.8.8:53]
+      --concurrency <CONCURRENCY>  Number of concurrent requests [default: 10]
+  -h, --help                       Print help
 ```
 
 ## Included Plugins
