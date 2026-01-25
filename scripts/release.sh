@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-version=$(grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)"/\1/')
+version=$(sed -n 's/^version[[:space:]]*=[[:space:]]*["'"'"']*\([^"'"'"']*\)["'"'"']*/\1/p' Cargo.toml | head -n1)
 tag="v$version"
 
 : "${GIT_REMOTE:=origin}"
