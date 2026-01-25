@@ -30,24 +30,13 @@ dig @127.0.0.1 -p 1053 example.com A
 
 ```mermaid
 flowchart LR
-    subgraph DAWN["DAWN Proxy"]
-        direction TB
-        UDP["UDP Socket"]
-        Tokio["Tokio Task"]
-        WASM["WASM Plugin"]
-
-        UDP --> Tokio
-        Tokio -- spawn_blocking --> WASM
-        WASM -- transformed --> Tokio
+    Socket["UDP Socket"] --> WASM
+    subgraph WASM["WASM Plugin"]
+        transform["transform()"]
     end
-
-    Client((Client)) -- DNS query --> UDP
-    Tokio -- query --> Upstream[(Upstream DNS)]
-    Upstream -- response --> Tokio
-    Tokio -- response --> Client
+    WASM -- modified request --> Upstream["Upstream Resolver"]
+    Upstream -- response --> Socket
 ```
-
-The plugin module is pre-compiled once at startup (`InstancePre`), making per-request instantiation fast. Each request spawns a blocking task for parallel WASM execution.
 
 ## Writing Plugins
 
