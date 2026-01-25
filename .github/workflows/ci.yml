@@ -2,6 +2,8 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'dawn/**'
       - 'plugins/**'
@@ -11,6 +13,8 @@ on:
       - 'flake.lock'
       - '.github/workflows/ci.yml'
   pull_request:
+    branches:
+      - main
     paths:
       - 'dawn/**'
       - 'plugins/**'
