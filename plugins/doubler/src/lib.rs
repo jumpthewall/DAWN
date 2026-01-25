@@ -44,25 +44,32 @@ pub extern "C" fn alloc(size: u32) -> *mut u8 {
 }
 
 /// Deallocate memory in WASM linear memory
+///
+/// # Safety
+/// `ptr` must have been allocated by `alloc` with the same `size`.
 #[no_mangle]
-pub extern "C" fn dealloc(ptr: *mut u8, size: u32) {
-    unsafe {
-        let _ = Vec::from_raw_parts(ptr, 0, size as usize);
-    }
+pub unsafe extern "C" fn dealloc(ptr: *mut u8, size: u32) {
+    // SAFETY: caller guarantees ptr was allocated by alloc with this size
+    let _ = Vec::from_raw_parts(ptr, 0, size as usize);
 }
 
 /// Transform a DNS packet by duplicating questions
 ///
 /// Returns the number of bytes written to the output buffer
+///
+/// # Safety
+/// - `input_ptr` must be valid for reads of `input_len` bytes
+/// - `output_ptr` must be valid for writes of `output_capacity` bytes
 #[no_mangle]
-pub extern "C" fn transform(
+pub unsafe extern "C" fn transform(
     input_ptr: *const u8,
     input_len: u32,
     output_ptr: *mut u8,
     output_capacity: u32,
 ) -> u32 {
-    let input = unsafe { slice::from_raw_parts(input_ptr, input_len as usize) };
-    let output = unsafe { slice::from_raw_parts_mut(output_ptr, output_capacity as usize) };
+    // SAFETY: caller guarantees pointers are valid for the given lengths
+    let input = slice::from_raw_parts(input_ptr, input_len as usize);
+    let output = slice::from_raw_parts_mut(output_ptr, output_capacity as usize);
 
     match duplicate_questions(input, output) {
         Some(len) => len as u32,
@@ -100,11 +107,12 @@ fn duplicate_questions(input: &[u8], output: &mut [u8]) -> Option<usize> {
     let mut offset = HEADER_SIZE;
     let mut need_duplication = false;
 
-    for i in 0..qdcount as usize {
-        if i >= 16 {
-            return None; // Too many questions
-        }
+    let qdcount_usize = qdcount as usize;
+    if qdcount_usize > 16 {
+        return None; // Too many questions
+    }
 
+    for info in question_info.iter_mut().take(qdcount_usize) {
         let name_start = offset;
 
         // Skip the name
@@ -118,7 +126,7 @@ fn duplicate_questions(input: &[u8], output: &mut [u8]) -> Option<usize> {
         let qclass = u16::from_be_bytes([input[offset + 2], input[offset + 3]]);
         offset += 4;
 
-        question_info[i] = (name_start, qtype, qclass);
+        *info = (name_start, qtype, qclass);
 
         if should_duplicate(qtype) {
             need_duplication = true;
@@ -159,9 +167,7 @@ fn duplicate_questions(input: &[u8], output: &mut [u8]) -> Option<usize> {
 
     // Add duplicates using compression pointers
     let mut out_offset = questions_end;
-    for i in 0..qdcount as usize {
-        let (name_offset, qtype, qclass) = question_info[i];
-
+    for &(name_offset, qtype, qclass) in question_info.iter().take(qdcount_usize) {
         // Compression pointer: 0xC000 | offset
         let pointer = 0xC000 | (name_offset as u16);
         output[out_offset] = (pointer >> 8) as u8;

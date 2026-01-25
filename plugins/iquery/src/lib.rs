@@ -42,11 +42,13 @@ pub extern "C" fn alloc(size: u32) -> *mut u8 {
 }
 
 /// Deallocate memory in WASM linear memory
+///
+/// # Safety
+/// `ptr` must have been allocated by `alloc` with the same `size`.
 #[no_mangle]
-pub extern "C" fn dealloc(ptr: *mut u8, size: u32) {
-    unsafe {
-        let _ = Vec::from_raw_parts(ptr, 0, size as usize);
-    }
+pub unsafe extern "C" fn dealloc(ptr: *mut u8, size: u32) {
+    // SAFETY: caller guarantees ptr was allocated by alloc with this size
+    let _ = Vec::from_raw_parts(ptr, 0, size as usize);
 }
 
 /// Transform a DNS packet by setting the IQUERY opcode
@@ -55,15 +57,20 @@ pub extern "C" fn dealloc(ptr: *mut u8, size: u32) {
 /// while preserving the RD (Recursion Desired) bit.
 ///
 /// Returns the number of bytes written to the output buffer
+///
+/// # Safety
+/// - `input_ptr` must be valid for reads of `input_len` bytes
+/// - `output_ptr` must be valid for writes of `output_capacity` bytes
 #[no_mangle]
-pub extern "C" fn transform(
+pub unsafe extern "C" fn transform(
     input_ptr: *const u8,
     input_len: u32,
     output_ptr: *mut u8,
     output_capacity: u32,
 ) -> u32 {
-    let input = unsafe { slice::from_raw_parts(input_ptr, input_len as usize) };
-    let output = unsafe { slice::from_raw_parts_mut(output_ptr, output_capacity as usize) };
+    // SAFETY: caller guarantees pointers are valid for the given lengths
+    let input = slice::from_raw_parts(input_ptr, input_len as usize);
+    let output = slice::from_raw_parts_mut(output_ptr, output_capacity as usize);
 
     set_iquery_opcode(input, output) as u32
 }

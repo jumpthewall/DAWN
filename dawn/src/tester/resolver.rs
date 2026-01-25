@@ -76,7 +76,7 @@ pub async fn test_system_resolver(domain: &str, forged_ips: &ForgedIps) -> Resol
 
     match timeout(DNS_TIMEOUT, resolver.lookup_ip(domain)).await {
         Ok(Ok(lookup)) => {
-            let ips: Vec<IpAddr> = lookup.iter().map(IpAddr::from).collect();
+            let ips: Vec<IpAddr> = lookup.iter().collect();
             if ips.is_empty() {
                 ResolutionResult::NotCensored
             } else if forged_ips.any_forged(&ips) {
