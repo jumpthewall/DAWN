@@ -221,9 +221,7 @@ mod tests {
     fn test_skip_name_simple() {
         // "example.com" = 7example3com0
         let data = [
-            7, b'e', b'x', b'a', b'm', b'p', b'l', b'e',
-            3, b'c', b'o', b'm',
-            0
+            7, b'e', b'x', b'a', b'm', b'p', b'l', b'e', 3, b'c', b'o', b'm', 0,
         ];
         assert_eq!(skip_name(&data, 0), Some(13));
     }
@@ -239,10 +237,7 @@ mod tests {
             0x00, 0x00, // NSCOUNT = 0
             0x00, 0x00, // ARCOUNT = 0
             // Question: test.com A IN
-            4, b't', b'e', b's', b't',
-            3, b'c', b'o', b'm',
-            0,
-            0x00, 0x01, // QTYPE = A
+            4, b't', b'e', b's', b't', 3, b'c', b'o', b'm', 0, 0x00, 0x01, // QTYPE = A
             0x00, 0x01, // QCLASS = IN
         ];
 

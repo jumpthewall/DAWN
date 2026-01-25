@@ -28,64 +28,70 @@ dig @127.0.0.1 -p 1053 example.com A
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        DAWN Proxy                           │
-│                                                             │
-│   UDP Socket ──→ Tokio Tasks ──→ WASM Worker Thread         │
-│        ↑              │                   │                 │
-│        │              ↓                   ↓                 │
-│        │         mpsc channel      Wasmtime Runtime         │
-│        │              │                   │                 │
-│        │              ↓                   │                 │
-│        └──── oneshot response ←───────────┘                 │
-│                                                             │
-│   Client → Transform Plugin → Upstream DNS → Response       │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph DAWN["DAWN Proxy"]
+        direction TB
+        UDP["UDP Socket"]
+        Tokio["Tokio Task"]
+        WASM["WASM Plugin"]
+
+        UDP --> Tokio
+        Tokio -- spawn_blocking --> WASM
+        WASM -- transformed --> Tokio
+    end
+
+    Client((Client)) -- DNS query --> UDP
+    Tokio -- query --> Upstream[(Upstream DNS)]
+    Upstream -- response --> Tokio
+    Tokio -- response --> Client
 ```
 
-The proxy runs a dedicated thread with Wasmtime for plugin execution, communicating via channels. This keeps the async UDP handling separate from the synchronous WASM runtime.
+The plugin module is pre-compiled once at startup (`InstancePre`), making per-request instantiation fast. Each request spawns a blocking task for parallel WASM execution.
 
 ## Writing Plugins
 
-Plugins are WASM modules exporting three functions:
+Plugins are WASM modules that transform DNS packets. See the **[Plugin Development Guide](plugins/README.md)** for complete documentation, including:
+
+- Full ABI reference and memory protocol
+- Step-by-step project setup
+- DNS packet format reference
+- Testing strategies
+- Binary size optimization
+
+Quick example - a minimal plugin that passes packets through unchanged:
 
 ```rust
-// Allocate memory for the host to write into
-extern "C" fn alloc(size: u32) -> *mut u8;
+#![cfg_attr(target_arch = "wasm32", no_std)]
 
-// Free previously allocated memory
-extern "C" fn dealloc(ptr: *mut u8, size: u32);
+#[no_mangle]
+pub extern "C" fn transform(
+    input_ptr: *const u8, input_len: u32,
+    output_ptr: *mut u8, _output_capacity: u32,
+) -> u32 {
+    unsafe {
+        core::ptr::copy_nonoverlapping(input_ptr, output_ptr, input_len as usize);
+    }
+    input_len
+}
 
-// Transform a DNS packet, returns output length
-extern "C" fn transform(
-    input_ptr: *const u8,
-    input_len: u32,
-    output_ptr: *mut u8,
-    output_capacity: u32,
-) -> u32;
+// ... plus alloc/dealloc exports (see full guide)
 ```
 
-See `plugins/doubler/` for a complete example that duplicates DNS questions using compression pointers.
-
-### Plugin Development Tips
-
-- Use `#![no_std]` with `wee_alloc` for minimal binary size
-- The transform function receives raw DNS wire format
-- Return the number of bytes written to the output buffer
-- If transform fails, copy input to output unchanged
+Check out the existing plugins in `plugins/` for real-world examples.
 
 ## Building
 
 Requires [Nix](https://nixos.org/) with flakes enabled.
 
 ```bash
-# Build the complete bundle (proxy + plugins)
-nix build .#bundle
+# Build the complete bundle (binaries + plugins + data)
+nix build .#fullBundle
 
 # Build components separately
-nix build .#proxy          # Static musl binary
+nix build .#dawn           # Static musl binaries (proxy + tester)
 nix build .#doublerPlugin  # WASM plugin
+nix build .#iqueryPlugin   # WASM plugin
 
 # Development shell with full toolchain
 nix develop
@@ -108,7 +114,11 @@ Options:
 
 ### doubler
 
-Duplicates A, AAAA, and CNAME questions in DNS queries using compression pointers. This is a proof-of-concept demonstrating the plugin architecture.
+Duplicates A, AAAA, and CNAME questions in DNS queries using compression pointers. This can confuse censors that only inspect the first question.
+
+### iquery
+
+Sets the IQUERY (inverse query) opcode in DNS headers. Some censors don't inspect packets with unusual opcodes.
 
 ## License
 

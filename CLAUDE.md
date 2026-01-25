@@ -29,17 +29,17 @@ cargo build -p dawn_doubler --target wasm32-unknown-unknown --release
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        DAWN Proxy                           │
-│   UDP Socket ──→ Tokio Tasks ──→ WASM Worker Thread         │
-│        ↑              │                   │                 │
-│        └──── oneshot ←── mpsc ←── Wasmtime Runtime          │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│                         DAWN Proxy                            │
+│   UDP Socket ──→ Tokio Task ──→ spawn_blocking ──→ Wasmtime   │
+│        ↑                                              │       │
+│        └──────────────── response ←───────────────────┘       │
+└───────────────────────────────────────────────────────────────┘
 ```
 
 **Flow:** Client → dawn proxy → WASM transform → Upstream DNS → Response → Client
 
-The proxy uses a dedicated std::thread for Wasmtime to avoid blocking the Tokio runtime. Communication happens via mpsc (requests) and oneshot (responses) channels.
+Each request uses `spawn_blocking` for WASM execution. The plugin is pre-compiled once at startup (`InstancePre`), enabling fast parallel instantiation without channel overhead.
 
 ## Directory Structure
 
@@ -94,28 +94,14 @@ dns_doubler/
 - Duplicates A/AAAA/CNAME questions using DNS compression pointers
 - Pure byte manipulation, no external DNS parsing libraries
 
-## WASM Plugin ABI
+## Plugin Development
 
-All plugins must export:
-
-```rust
-extern "C" fn alloc(size: u32) -> *mut u8;
-extern "C" fn dealloc(ptr: *mut u8, size: u32);
-extern "C" fn transform(
-    input_ptr: *const u8,
-    input_len: u32,
-    output_ptr: *mut u8,
-    output_capacity: u32
-) -> u32;  // Returns bytes written to output
-```
-
-**Memory protocol:**
-1. Host calls `alloc(input_len)` → gets input_ptr
-2. Host calls `alloc(output_capacity)` → gets output_ptr
-3. Host writes input data to input_ptr
-4. Host calls `transform(input_ptr, input_len, output_ptr, output_capacity)`
-5. Host reads output_len bytes from output_ptr
-6. Host calls `dealloc` for both buffers
+See [`plugins/README.md`](plugins/README.md) for a comprehensive guide on writing WASM plugins, including:
+- Complete ABI reference (`alloc`, `dealloc`, `transform`)
+- Step-by-step setup instructions
+- DNS packet format documentation
+- Testing and debugging tips
+- Binary size optimization
 
 ## Testing
 
