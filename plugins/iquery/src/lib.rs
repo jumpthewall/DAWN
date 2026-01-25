@@ -71,11 +71,14 @@ fn set_iquery_opcode(input: &[u8], output: &mut [u8]) -> usize {
         output[..copy_len].copy_from_slice(&input[..copy_len]);
         return copy_len;
     }
-
-    // Ensure output can hold the input
-    let copy_len = core::cmp::min(input.len(), output.len());
-    output[..copy_len].copy_from_slice(&input[..copy_len]);
-
+    // Only modify flags if we have at least 3 bytes in the output buffer
+    if copy_len > 2 {
+        // Modify byte 2 (flags byte 1):
+        // - Clear opcode bits (bits 1-4): AND with 0x87
+        // - Set IQUERY opcode (1): OR with 0x08
+        // - RD bit (bit 7) is preserved automatically
+        output[2] = (output[2] & OPCODE_CLEAR_MASK) | IQUERY_OPCODE;
+    }
     // Modify byte 2 (flags byte 1):
     // - Clear opcode bits (bits 1-4): AND with 0x87
     // - Set IQUERY opcode (1): OR with 0x08
