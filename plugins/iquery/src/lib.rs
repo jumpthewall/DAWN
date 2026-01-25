@@ -64,26 +64,17 @@ pub unsafe extern "C" fn transform(
 ///
 /// IQUERY = opcode 1 = bits 1-4 of byte 2 set to 0001
 fn set_iquery_opcode(input: &[u8], output: &mut [u8]) -> usize {
-    // Ensure we have at least a DNS header
-    if input.len() < HEADER_SIZE {
-        // Packet too small, copy unchanged
-        let copy_len = core::cmp::min(input.len(), output.len());
-        output[..copy_len].copy_from_slice(&input[..copy_len]);
-        return copy_len;
-    }
-    // Only modify flags if we have at least 3 bytes in the output buffer
-    if copy_len > 2 {
+    let copy_len = core::cmp::min(input.len(), output.len());
+    output[..copy_len].copy_from_slice(&input[..copy_len]);
+
+    // Only modify flags if we have at least a DNS header
+    if copy_len >= HEADER_SIZE {
         // Modify byte 2 (flags byte 1):
         // - Clear opcode bits (bits 1-4): AND with 0x87
         // - Set IQUERY opcode (1): OR with 0x08
         // - RD bit (bit 7) is preserved automatically
         output[2] = (output[2] & OPCODE_CLEAR_MASK) | IQUERY_OPCODE;
     }
-    // Modify byte 2 (flags byte 1):
-    // - Clear opcode bits (bits 1-4): AND with 0x87
-    // - Set IQUERY opcode (1): OR with 0x08
-    // - RD bit (bit 7) is preserved automatically
-    output[2] = (output[2] & OPCODE_CLEAR_MASK) | IQUERY_OPCODE;
 
     copy_len
 }
