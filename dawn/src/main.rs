@@ -11,7 +11,9 @@ const MAX_DNS_PACKET_SIZE: usize = 512;
 
 #[derive(Parser, Debug)]
 #[command(name = "dawn")]
-#[command(about = "DNS Anti-censorship WebAssembly Nexus - A DNS proxy with pluggable WASM transforms")]
+#[command(
+    about = "DNS Anti-censorship WebAssembly Nexus - A DNS proxy with pluggable WASM transforms"
+)]
 struct Args {
     /// Path to the WASM plugin module
     #[arg(long)]
@@ -54,7 +56,9 @@ async fn main() -> Result<()> {
         let upstream = args.upstream.clone();
 
         tokio::spawn(async move {
-            if let Err(e) = handle_query(socket_clone, worker_clone, query, client_addr, &upstream).await {
+            if let Err(e) =
+                handle_query(socket_clone, worker_clone, query, client_addr, &upstream).await
+            {
                 eprintln!("Error handling query from {}: {}", client_addr, e);
             }
         });
@@ -99,7 +103,9 @@ async fn handle_query(
     let response_len = upstream_socket.recv(&mut response_buf).await?;
 
     // Send response back to client
-    socket.send_to(&response_buf[..response_len], client_addr).await?;
+    socket
+        .send_to(&response_buf[..response_len], client_addr)
+        .await?;
 
     Ok(())
 }

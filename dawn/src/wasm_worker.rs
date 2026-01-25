@@ -15,7 +15,10 @@ impl WasmWorker {
         let linker = Linker::new(&engine);
         let instance_pre = linker.instantiate_pre(&module)?;
 
-        Ok(Self { engine, instance_pre })
+        Ok(Self {
+            engine,
+            instance_pre,
+        })
     }
 
     /// Transform a DNS packet using the WASM plugin
@@ -65,8 +68,10 @@ fn process_transform(store: &mut Store<()>, instance: &Instance, input: &[u8]) -
     memory.write(&mut *store, input_ptr as usize, input)?;
 
     // Call transform
-    let output_len =
-        transform.call(&mut *store, (input_ptr, input_len, output_ptr, output_capacity))?;
+    let output_len = transform.call(
+        &mut *store,
+        (input_ptr, input_len, output_ptr, output_capacity),
+    )?;
 
     // Read output from WASM memory
     let mut output = vec![0u8; output_len as usize];

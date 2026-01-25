@@ -71,10 +71,7 @@ impl TestResults {
 }
 
 /// Test domain resolution using the system resolver
-pub async fn test_system_resolver(
-    domain: &str,
-    forged_ips: &ForgedIps,
-) -> ResolutionResult {
+pub async fn test_system_resolver(domain: &str, forged_ips: &ForgedIps) -> ResolutionResult {
     let resolver = TokioAsyncResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
 
     match timeout(DNS_TIMEOUT, resolver.lookup_ip(domain)).await {
@@ -136,8 +133,7 @@ pub async fn test_plugin_resolver(
 
 /// Build a DNS A query for a domain
 fn build_dns_query(domain: &str) -> Result<Vec<u8>> {
-    let name = Name::from_ascii(domain)
-        .map_err(|e| anyhow!("Invalid domain name: {}", e))?;
+    let name = Name::from_ascii(domain).map_err(|e| anyhow!("Invalid domain name: {}", e))?;
 
     let mut message = Message::new();
     message.set_id(rand::thread_rng().gen());

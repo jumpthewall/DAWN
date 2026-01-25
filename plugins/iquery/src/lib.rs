@@ -113,10 +113,7 @@ mod tests {
             0x00, 0x00, // NSCOUNT = 0
             0x00, 0x00, // ARCOUNT = 0
             // Question: test.com A IN
-            4, b't', b'e', b's', b't',
-            3, b'c', b'o', b'm',
-            0,
-            0x00, 0x01, // QTYPE = A
+            4, b't', b'e', b's', b't', 3, b'c', b'o', b'm', 0, 0x00, 0x01, // QTYPE = A
             0x00, 0x01, // QCLASS = IN
         ];
 

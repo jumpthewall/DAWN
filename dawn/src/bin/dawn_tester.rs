@@ -65,10 +65,7 @@ async fn main() -> Result<()> {
     println!();
 
     // Parse upstream address
-    let upstream: SocketAddr = args
-        .upstream
-        .parse()
-        .context("Invalid upstream address")?;
+    let upstream: SocketAddr = args.upstream.parse().context("Invalid upstream address")?;
 
     // Parse plugin paths
     let plugin_paths: Vec<&str> = args
@@ -94,8 +91,7 @@ async fn main() -> Result<()> {
         let worker = Arc::new(worker);
 
         let results =
-            test_domains_plugin(&domains, &forged_ips, &worker, &upstream, args.concurrency)
-                .await;
+            test_domains_plugin(&domains, &forged_ips, &worker, &upstream, args.concurrency).await;
         clear_progress();
         println!("  Completed: {} domains tested", results.total);
 
