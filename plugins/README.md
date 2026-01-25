@@ -32,8 +32,8 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]  # cdylib for WASM, rlib for tests
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-wee_alloc = "0.4"
+[dependencies]
+dawn_plugin_common = { git = "https://github.com/jumpthewall/DAWN", path = "plugins/common" }
 
 [profile.release]
 opt-level = "s"    # Optimize for size
@@ -46,55 +46,28 @@ panic = "abort"    # No unwinding in WASM
 ```rust
 #![cfg_attr(target_arch = "wasm32", no_std)]
 
-#[cfg(target_arch = "wasm32")]
-extern crate alloc;
+use dawn_plugin_common::slice;
 
-#[cfg(target_arch = "wasm32")]
-use alloc::vec::Vec;
-
-#[cfg(not(target_arch = "wasm32"))]
-use std::vec::Vec;
-
-use core::slice;
-
-// Minimal allocator for small WASM binary size
-#[cfg(target_arch = "wasm32")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-// WASM requires a panic handler in no_std
-#[cfg(target_arch = "wasm32")]
-#[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
-    core::arch::wasm32::unreachable()
-}
-
-// === Required ABI Exports ===
-
+// Re-export alloc/dealloc from the common crate
 #[no_mangle]
 pub extern "C" fn alloc(size: u32) -> *mut u8 {
-    let mut buf = Vec::with_capacity(size as usize);
-    let ptr = buf.as_mut_ptr();
-    core::mem::forget(buf);
-    ptr
+    dawn_plugin_common::plugin_alloc(size)
 }
 
 #[no_mangle]
-pub extern "C" fn dealloc(ptr: *mut u8, size: u32) {
-    unsafe {
-        let _ = Vec::from_raw_parts(ptr, 0, size as usize);
-    }
+pub unsafe extern "C" fn dealloc(ptr: *mut u8, size: u32) {
+    dawn_plugin_common::plugin_dealloc(ptr, size)
 }
 
 #[no_mangle]
-pub extern "C" fn transform(
+pub unsafe extern "C" fn transform(
     input_ptr: *const u8,
     input_len: u32,
     output_ptr: *mut u8,
     output_capacity: u32,
 ) -> u32 {
-    let input = unsafe { slice::from_raw_parts(input_ptr, input_len as usize) };
-    let output = unsafe { slice::from_raw_parts_mut(output_ptr, output_capacity as usize) };
+    let input = slice::from_raw_parts(input_ptr, input_len as usize);
+    let output = slice::from_raw_parts_mut(output_ptr, output_capacity as usize);
 
     // Your transformation logic here
     // This example just copies the packet unchanged
@@ -103,6 +76,12 @@ pub extern "C" fn transform(
     len as u32
 }
 ```
+
+The `dawn_plugin_common` crate provides:
+- `plugin_alloc` / `plugin_dealloc` - Memory management for WASM
+- `slice` - Re-exported `core::slice` for pointer conversions
+- `Vec` - Re-exported `alloc::vec::Vec` (for WASM) or `std::vec::Vec`
+- Global allocator (`wee_alloc`) and panic handler for `no_std` WASM builds
 
 4. Build the plugin:
 

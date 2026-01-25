@@ -14,8 +14,8 @@ readme = "../README.md"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-wee_alloc = "0.4"
+[dependencies]
+dawn_plugin_common = { path = "../common" }
 
 [profile.release]
 opt-level = "s"

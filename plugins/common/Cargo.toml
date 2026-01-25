@@ -1,5 +1,5 @@
 [package]
-name = "dawn_doubler"
+name = "dawn_plugin_common"
 version = "0.1.0"
 authors.workspace = true
 edition.workspace = true
@@ -8,16 +8,11 @@ repository.workspace = true
 homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "Question duplication plugin for DAWN"
+description = "Common utilities for DAWN plugins"
 readme = "../README.md"
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
-[dependencies]
-dawn_plugin_common = { path = "../common" }
-
-[profile.release]
-opt-level = "s"
-lto = true
-panic = "abort"
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wee_alloc = "0.4"

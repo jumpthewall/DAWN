@@ -1,24 +1,17 @@
 #![cfg_attr(target_arch = "wasm32", no_std)]
 
-#[cfg(target_arch = "wasm32")]
-extern crate alloc;
+use dawn_plugin_common::slice;
 
-#[cfg(target_arch = "wasm32")]
-use alloc::vec::Vec;
+/// Allocate memory in WASM linear memory
+#[no_mangle]
+pub extern "C" fn alloc(size: u32) -> *mut u8 {
+    dawn_plugin_common::plugin_alloc(size)
+}
 
-#[cfg(not(target_arch = "wasm32"))]
-use std::vec::Vec;
-
-use core::slice;
-
-#[cfg(target_arch = "wasm32")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-#[cfg(target_arch = "wasm32")]
-#[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
-    core::arch::wasm32::unreachable()
+/// Deallocate memory in WASM linear memory
+#[no_mangle]
+pub unsafe extern "C" fn dealloc(ptr: *mut u8, size: u32) {
+    dawn_plugin_common::plugin_dealloc(ptr, size)
 }
 
 /// DNS header size in bytes
@@ -31,25 +24,6 @@ const OPCODE_CLEAR_MASK: u8 = 0x87;
 /// IQUERY opcode value (1) shifted into position (bits 1-4)
 /// Binary: 00001000 = 0x08
 const IQUERY_OPCODE: u8 = 0x08;
-
-/// Allocate memory in WASM linear memory
-#[no_mangle]
-pub extern "C" fn alloc(size: u32) -> *mut u8 {
-    let mut buf = Vec::with_capacity(size as usize);
-    let ptr = buf.as_mut_ptr();
-    core::mem::forget(buf);
-    ptr
-}
-
-/// Deallocate memory in WASM linear memory
-///
-/// # Safety
-/// `ptr` must have been allocated by `alloc` with the same `size`.
-#[no_mangle]
-pub unsafe extern "C" fn dealloc(ptr: *mut u8, size: u32) {
-    // SAFETY: caller guarantees ptr was allocated by alloc with this size
-    let _ = Vec::from_raw_parts(ptr, 0, size as usize);
-}
 
 /// Transform a DNS packet by setting the IQUERY opcode
 ///
