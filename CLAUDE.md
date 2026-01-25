@@ -9,12 +9,16 @@ DAWN (DNS Anti-censorship WebAssembly Nexus) is a DNS proxy that supports plugga
 ## Build Commands
 
 ```bash
-# Build everything (binaries + plugins)
-nix build .#release
+# Build release bundle (binaries + plugins + data)
+nix build .#release        # or .#fullBundle (alias)
 
-# Build components separately
+# Build components separately (release)
 nix build .#dawn           # Static musl binary (proxy + tester)
 nix build .#doublerPlugin  # WASM plugin
+nix build .#iqueryPlugin   # WASM plugin
+
+# Build everything in debug mode (faster, for CI/testing)
+nix build .#check
 
 # Development
 nix develop                # Enter dev shell

@@ -4,4 +4,3 @@ rustflags = [
     "-C", "opt-level=s",
     "-C", "panic=abort",
 ]
-

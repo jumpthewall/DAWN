@@ -24,8 +24,8 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
 
-      - name: Build full bundle
-        run: nix build .#fullBundle
+      - name: Build release bundle
+        run: nix build .#release
 
       - name: Get version from tag
         id: version
@@ -85,7 +85,8 @@ jobs:
             │   ├── forged.ipv4    # Known forged IPv4 addresses
             │   └── forged.ipv6    # Known forged IPv6 addresses
             └── lib/
-                └── dawn_doubler.wasm  # Question doubling plugin
+                ├── dawn_doubler.wasm  # Question doubling plugin
+                └── dawn_iquery.wasm   # IQUERY opcode plugin
             ```
           files: |
             dawn-bundle-${{ steps.version.outputs.VERSION }}.zip

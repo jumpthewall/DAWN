@@ -61,10 +61,5 @@ jobs:
           name: nix-community
           skipPush: true
 
-      - name: Build and test dawn
-        run: nix build .#dawn
-
-      - name: Build plugins
-        run: |
-          nix build .#doublerPlugin
-          nix build .#iqueryPlugin
+      - name: Build dawn and plugins (debug)
+        run: nix build .#check

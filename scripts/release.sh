@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 set -e
 
 version=$(grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)"/\1/')

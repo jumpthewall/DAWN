@@ -44,6 +44,7 @@
             CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
             HOST_CC = "${pkgs.stdenv.cc}/bin/cc";
           };
+
         # Function to build plugin derivations
         buildPlugin = path:
           let
@@ -61,9 +62,21 @@
               cp target/${wasmTarget}/release/${crate.pname}.wasm $out/lib/
             '';
           };
+
+        # Helper to convert a package to debug mode
+        toDebug = pkg: pkg.overrideAttrs (old: {
+          CARGO_PROFILE = "dev";
+          # Update install command for plugins to use debug directory
+          installPhaseCommand =
+            if old ? installPhaseCommand
+            then builtins.replaceStrings [ "/release/" ] [ "/debug/" ] old.installPhaseCommand
+            else null;
+        });
       in
       rec {
         packages = {
+          # === Release builds (optimized, for distribution) ===
+
           # DAWN proxy and tester binaries
           dawn = buildPackage {
             path = ./dawn;
@@ -71,22 +84,10 @@
           };
 
           # WASM plugins
-          ## DNS Doubler
           doublerPlugin = buildPlugin ./plugins/doubler;
-          ## Inverse query
           iqueryPlugin = buildPlugin ./plugins/iquery;
 
-          # Test runner script that tests all plugins
-          test-all = pkgs.writeShellScriptBin "dawn-test-all" ''
-            exec ${packages.dawn}/bin/dawn-tester \
-              --plugins "${packages.doublerPlugin}/lib/dawn_doubler.wasm,${packages.iqueryPlugin}/lib/dawn_iquery.wasm" \
-              --domains "${./data}/censored.txt" \
-              --forged-ipv4 "${./data}/forged.ipv4" \
-              --forged-ipv6 "${./data}/forged.ipv6" \
-              "$@"
-          '';
-
-          # Full bundle as a zip file with binaries, plugins, and data
+          # Full release bundle as a zip file with binaries, plugins, and data
           release = pkgs.runCommand "dawn-full-bundle"
             {
               nativeBuildInputs = [ pkgs.zip ];
@@ -107,6 +108,31 @@
             # Create zip
             cd dawn-bundle
             zip -r $out/dawn-bundle.zip .
+          '';
+
+          # Alias for backwards compatibility
+          fullBundle = packages.release;
+
+          # CI check target - builds everything in debug mode
+          check = pkgs.symlinkJoin {
+            name = "dawn-check";
+            paths = [
+              (toDebug packages.dawn)
+              (toDebug packages.doublerPlugin)
+              (toDebug packages.iqueryPlugin)
+            ];
+          };
+
+          # === Utilities ===
+
+          # Test runner script that tests all plugins
+          test-all = pkgs.writeShellScriptBin "dawn-test-all" ''
+            exec ${packages.dawn}/bin/dawn-tester \
+              --plugins "${packages.doublerPlugin}/lib/dawn_doubler.wasm,${packages.iqueryPlugin}/lib/dawn_iquery.wasm" \
+              --domains "${./data}/censored.txt" \
+              --forged-ipv4 "${./data}/forged.ipv4" \
+              --forged-ipv6 "${./data}/forged.ipv6" \
+              "$@"
           '';
 
           default = packages.release;

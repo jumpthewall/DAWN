@@ -16,8 +16,8 @@ DAWN solves this by separating the **transport** (a fast, async Rust proxy) from
 ## Quick Start
 
 ```bash
-# Build everything
-nix build .#bundle
+# Build the release bundle
+nix build .#release
 
 # Run the proxy with a plugin
 ./result/bin/dawn --plugin ./result/lib/dawn_doubler.wasm
@@ -74,13 +74,16 @@ Check out the existing plugins in `plugins/` for real-world examples.
 Requires [Nix](https://nixos.org/) with flakes enabled.
 
 ```bash
-# Build the complete bundle (binaries + plugins + data)
+# Build the complete release bundle (binaries + plugins + data)
 nix build .#release
 
-# Build components separately
+# Build components separately (release)
 nix build .#dawn           # Static musl binaries (proxy + tester)
 nix build .#doublerPlugin  # WASM plugin
 nix build .#iqueryPlugin   # WASM plugin
+
+# Build everything in debug mode (faster, for CI/testing)
+nix build .#check
 
 # Development shell with full toolchain
 nix develop
