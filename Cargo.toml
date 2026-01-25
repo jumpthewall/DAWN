@@ -2,6 +2,9 @@
 members = ["dawn", "plugins/common", "plugins/doubler", "plugins/iquery"]
 resolver = "2"
 
+[profile.release]
+lto = true
+
 [workspace.package]
 version = "0.2.0"
 authors = ["Jade"]

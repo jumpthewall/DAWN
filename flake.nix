@@ -87,7 +87,7 @@
           '';
 
           # Full bundle as a zip file with binaries, plugins, and data
-          fullBundle = pkgs.runCommand "dawn-full-bundle"
+          release = pkgs.runCommand "dawn-full-bundle"
             {
               nativeBuildInputs = [ pkgs.zip ];
             } ''
@@ -109,7 +109,7 @@
             zip -r $out/dawn-bundle.zip .
           '';
 
-          default = packages.fullBundle;
+          default = packages.release;
         };
 
         devShells.default = pkgs.mkShell {

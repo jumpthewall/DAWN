@@ -75,7 +75,7 @@ Requires [Nix](https://nixos.org/) with flakes enabled.
 
 ```bash
 # Build the complete bundle (binaries + plugins + data)
-nix build .#fullBundle
+nix build .#release
 
 # Build components separately
 nix build .#dawn           # Static musl binaries (proxy + tester)
