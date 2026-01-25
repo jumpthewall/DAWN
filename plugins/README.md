@@ -44,8 +44,6 @@ panic = "abort"    # No unwinding in WASM
 3. Implement the plugin in `src/lib.rs`:
 
 ```rust
-#![cfg_attr(target_arch = "wasm32", no_std)]
-
 use dawn_plugin_common::slice;
 
 // Re-export alloc/dealloc from the common crate
@@ -80,8 +78,7 @@ pub unsafe extern "C" fn transform(
 The `dawn_plugin_common` crate provides:
 - `plugin_alloc` / `plugin_dealloc` - Memory management for WASM
 - `slice` - Re-exported `core::slice` for pointer conversions
-- `Vec` - Re-exported `alloc::vec::Vec` (for WASM) or `std::vec::Vec`
-- Global allocator (`wee_alloc`) and panic handler for `no_std` WASM builds
+- `Vec` - Re-exported `std::vec::Vec`
 
 4. Build the plugin:
 
@@ -214,8 +211,6 @@ cargo test  # Runs on native target, not WASM
 
 Keep plugins small for fast loading:
 
-- Use `wee_alloc` instead of the default allocator (~10KB savings)
-- Use `#![no_std]` to avoid std library overhead
 - Enable LTO and size optimization in release profile
 - Avoid pulling in heavy dependencies
 
@@ -265,5 +260,4 @@ myPlugin = buildPlugin ./plugins/myplugin;
 
 - [RFC 1035](https://tools.ietf.org/html/rfc1035) - DNS protocol specification
 - [DNS packet format](https://datatracker.ietf.org/doc/html/rfc1035#section-4) - Wire format details
-- [wee_alloc](https://github.com/nickel-org/rust-wee-alloc) - Tiny WASM allocator
 - [Wasmtime](https://wasmtime.dev/) - The WASM runtime DAWN uses

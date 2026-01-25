@@ -65,12 +65,15 @@ dns_doubler/
 │           ├── resolver.rs     # DNS resolution testing
 │           └── report.rs       # Test reporting
 └── plugins/
+    ├── common/
+    │   ├── Cargo.toml      # Shared plugin utilities
+    │   └── src/lib.rs      # alloc/dealloc helpers, re-exports
     ├── doubler/
-    │   ├── Cargo.toml      # crate-type = ["cdylib"], wee_alloc
-    │   └── src/lib.rs      # #![no_std] doubler plugin
+    │   ├── Cargo.toml      # crate-type = ["cdylib"]
+    │   └── src/lib.rs      # Doubler plugin
     └── iquery/
-        ├── Cargo.toml      # crate-type = ["cdylib"], wee_alloc
-        └── src/lib.rs      # #![no_std] iquery plugin
+        ├── Cargo.toml      # crate-type = ["cdylib"]
+        └── src/lib.rs      # IQUERY plugin
 ```
 
 ## Key Files
@@ -93,7 +96,6 @@ dns_doubler/
 - Uses `dawn::tester` and `dawn::wasm_worker` modules
 
 ### plugins/doubler/src/lib.rs
-- `#![no_std]` with `wee_alloc` for minimal binary size
 - Exports `alloc`, `dealloc`, `transform` with C ABI
 - Duplicates A/AAAA/CNAME questions using DNS compression pointers
 - Pure byte manipulation, no external DNS parsing libraries

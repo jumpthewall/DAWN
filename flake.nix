@@ -65,6 +65,7 @@
 
         # Helper to convert a package to debug mode
         toDebug = pkg: pkg.overrideAttrs (old: {
+          pname = "${old.pname}-debug";
           CARGO_PROFILE = "dev";
           # Update install command for plugins to use debug directory
           installPhaseCommand =
