@@ -10,10 +10,6 @@ use wasm_worker::WasmWorker;
 const MAX_DNS_PACKET_SIZE: usize = 512;
 
 #[derive(Parser, Debug)]
-#[command(name = "dawn")]
-#[command(
-    about = "DNS Anti-censorship WebAssembly Nexus - A DNS proxy with pluggable WASM transforms"
-)]
 struct Args {
     /// Path to the WASM plugin module
     #[arg(long)]

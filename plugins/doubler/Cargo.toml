@@ -16,8 +16,3 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 dawn_plugin_common = { path = "../common" }
-
-[profile.release]
-opt-level = "s"
-lto = true
-panic = "abort"

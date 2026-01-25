@@ -24,11 +24,11 @@ name = "dawn-tester"
 path = "src/bin/dawn_tester.rs"
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "net", "sync", "macros", "time"] }
 anyhow = "1"
-wasmtime = "41"
+wasmtime = { version = "41", default-features = false, features = ["runtime", "cranelift"] }
 clap = { version = "4", features = ["derive"] }
 hickory-resolver = "0.24"
 hickory-proto = "0.24"
 colored = "3"
-rand = "0.8"
+rand = { version = "0.8", default-features = false, features = ["std", "std_rng"] }
