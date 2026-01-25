@@ -51,15 +51,13 @@ Plugins are WASM modules that transform DNS packets. See the **[Plugin Developme
 Quick example - a minimal plugin that passes packets through unchanged:
 
 ```rust
-#![cfg_attr(target_arch = "wasm32", no_std)]
-
 #[no_mangle]
-pub extern "C" fn transform(
+pub unsafe extern "C" fn transform(
     input_ptr: *const u8, input_len: u32,
     output_ptr: *mut u8, _output_capacity: u32,
 ) -> u32 {
-    unsafe {
-        core::ptr::copy_nonoverlapping(input_ptr, output_ptr, input_len as usize);
+    for i in 0..input_len as usize {
+        *output_ptr.add(i) = *input_ptr.add(i);
     }
     input_len
 }
