@@ -9,6 +9,10 @@ pub extern "C" fn alloc(size: u32) -> *mut u8 {
 }
 
 /// Deallocate memory in WASM linear memory
+///
+/// # Safety
+/// - `ptr` must have been allocated by `alloc` with the same `size`
+/// - `ptr` must not have been previously deallocated
 #[no_mangle]
 pub unsafe extern "C" fn dealloc(ptr: *mut u8, size: u32) {
     dawn_plugin_common::plugin_dealloc(ptr, size)
