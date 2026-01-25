@@ -1,5 +1,5 @@
-pub use std::vec::Vec;
 pub use core::slice;
+pub use std::vec::Vec;
 
 /// Allocate memory in WASM linear memory.
 ///
