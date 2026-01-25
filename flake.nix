@@ -15,103 +15,82 @@
         };
 
         muslTarget = "x86_64-unknown-linux-musl";
-        wasmTarget = "wasm32-unknown-unknown";
-
         # Toolchain for proxy (musl static binary)
         proxyToolchain = pkgs.rust-bin.stable.latest.minimal.override {
           targets = [ muslTarget ];
         };
+        proxyCraneLib = (crane.mkLib pkgs).overrideToolchain (_: proxyToolchain);
 
         # Toolchain for plugin (wasm)
+        wasmTarget = "wasm32-unknown-unknown";
         wasmToolchain = pkgs.rust-bin.stable.latest.minimal.override {
           targets = [ wasmTarget ];
         };
-
-        proxyCraneLib = (crane.mkLib pkgs).overrideToolchain (_: proxyToolchain);
         wasmCraneLib = (crane.mkLib pkgs).overrideToolchain (_: wasmToolchain);
 
         # Use crane's cleanCargoSource for proper filtering
         src = proxyCraneLib.cleanCargoSource ./.;
 
-        nativeBuildInputs = [ pkgs.pkg-config ];
+        # Common functionality for building static rust binaries (musl)
+        buildPackage = { path, nativeBuildInputs }:
+          let
+            crate = wasmCraneLib.crateNameFromCargoToml { cargoToml = "${path}/Cargo.toml"; };
+          in
+          proxyCraneLib.buildPackage {
+            inherit src;
+            inherit (crate) pname;
+            cargoExtraArgs = "-p ${crate.pname}";
+            CARGO_BUILD_TARGET = muslTarget;
+            CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
+            HOST_CC = "${pkgs.stdenv.cc}/bin/cc";
+          };
+        # Function to build plugin derivations
+        buildPlugin = path:
+          let
+            crate = wasmCraneLib.crateNameFromCargoToml { cargoToml = "${path}/Cargo.toml"; };
+          in
+          wasmCraneLib.buildPackage {
+            inherit src;
+            inherit (crate) pname version;
+            cargoExtraArgs = "-p ${crate.pname}";
+            CARGO_BUILD_TARGET = wasmTarget;
+            # WASM doesn't need linking
+            doCheck = false;
+            installPhaseCommand = ''
+              mkdir -p $out/lib
+              cp target/${wasmTarget}/release/${crate.pname}.wasm $out/lib/
+            '';
+          };
       in
       rec {
         packages = {
-          # DAWN proxy binary (static musl)
-          proxy = proxyCraneLib.buildPackage {
-            inherit nativeBuildInputs src;
-            pname = "dawn";
-            version = "0.1.0";
-            cargoExtraArgs = "-p dawn";
-
-            CARGO_BUILD_TARGET = muslTarget;
-            CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
-            HOST_CC = "${pkgs.stdenv.cc}/bin/cc";
+          # DAWN proxy binary 
+          dawn = buildPackage {
+            path = ./proxy;
+            nativeBuildInputs = with pkgs; [ pkg-config ];
+          };
+          # DAWN tester binary 
+          dawn_tester = buildPackage {
+            path = ./tester;
+            nativeBuildInputs = with pkgs; [ pkg-config ];
           };
 
-          # DAWN tester binary (static musl)
-          tester = proxyCraneLib.buildPackage {
-            inherit nativeBuildInputs src;
-            pname = "dawn-tester";
-            version = "0.1.0";
-            cargoExtraArgs = "-p dawn_tester";
-
-            CARGO_BUILD_TARGET = muslTarget;
-            CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
-            HOST_CC = "${pkgs.stdenv.cc}/bin/cc";
-          };
-
-          # Doubler WASM plugin
-          doublerPlugin = wasmCraneLib.buildPackage {
-            inherit src;
-            pname = "dawn_doubler";
-            version = "0.1.0";
-            cargoExtraArgs = "-p dawn_doubler";
-
-            CARGO_BUILD_TARGET = wasmTarget;
-
-            # WASM doesn't need linking
-            doCheck = false;
-
-            installPhaseCommand = ''
-              mkdir -p $out/lib
-              cp target/${wasmTarget}/release/dawn_doubler.wasm $out/lib/
-            '';
-          };
-
-          # IQUERY WASM plugin
-          iqueryPlugin = wasmCraneLib.buildPackage {
-            inherit src;
-            pname = "dawn_iquery";
-            version = "0.1.0";
-            cargoExtraArgs = "-p dawn_iquery";
-
-            CARGO_BUILD_TARGET = wasmTarget;
-
-            # WASM doesn't need linking
-            doCheck = false;
-
-            installPhaseCommand = ''
-              mkdir -p $out/lib
-              cp target/${wasmTarget}/release/dawn_iquery.wasm $out/lib/
-            '';
-          };
-
-          # Bundle: proxy, tester, and all plugins
-          bundle = pkgs.symlinkJoin {
-            name = "dawn-bundle";
-            paths = [ packages.proxy packages.tester packages.doublerPlugin packages.iqueryPlugin ];
-          };
+          # WASM plugins
+          ## DNS Doubler
+          doublerPlugin = buildPlugin ./plugins/doubler;
+          ## Inverse query
+          iqueryPlugin = buildPlugin ./plugins/doubler;
 
           # Full bundle as a zip file with binaries, plugins, and data
-          fullBundle = pkgs.runCommand "dawn-full-bundle" {
-            nativeBuildInputs = [ pkgs.zip ];
-          } ''
+          fullBundle = pkgs.runCommand "dawn-full-bundle"
+            {
+              nativeBuildInputs = [ pkgs.zip ];
+            } ''
             mkdir -p $out dawn-bundle/bin dawn-bundle/lib dawn-bundle/data
 
             # Copy binaries
-            cp ${packages.proxy}/bin/dawn dawn-bundle/bin/
-            cp ${packages.tester}/bin/dawn-tester dawn-bundle/bin/
+            cp ${packages.dawn}/bin/dawn dawn-bundle/bin/
+            cp ${packages.dawn_tester}/bin/dawn-tester dawn-bundle/bin/
 
             # Copy WASM plugins
             cp ${packages.doublerPlugin}/lib/*.wasm dawn-bundle/lib/
@@ -125,11 +104,11 @@
             zip -r $out/dawn-bundle.zip .
           '';
 
-          default = packages.bundle;
+          default = packages.fullBundle;
         };
 
         devShells.default = pkgs.mkShell {
-          nativeBuildInputs = nativeBuildInputs ++ [
+          nativeBuildInputs = packages.dawn.nativeBuildInputs ++ [
             (pkgs.rust-bin.stable.latest.default.override {
               extensions = [ "rust-src" "rustfmt" "rust-analyzer" "clippy" ];
               targets = [ muslTarget wasmTarget ];
