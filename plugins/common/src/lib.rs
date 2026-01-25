@@ -15,7 +15,7 @@ pub use std::vec::Vec;
 /// }
 /// ```
 pub fn plugin_alloc(size: u32) -> *mut u8 {
-    let mut buf = Vec::with_capacity(size as usize);
+    let mut buf = vec![0u8; size as usize];
     let ptr = buf.as_mut_ptr();
     core::mem::forget(buf);
     ptr

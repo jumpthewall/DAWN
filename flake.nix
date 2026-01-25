@@ -32,12 +32,12 @@
         src = proxyCraneLib.cleanCargoSource ./.;
 
         # Common functionality for building static rust binaries (musl)
-        buildPackage = { path, nativeBuildInputs }:
+        buildPackage = { path, nativeBuildInputs ? [ ] }:
           let
             crate = wasmCraneLib.crateNameFromCargoToml { cargoToml = "${path}/Cargo.toml"; };
           in
           proxyCraneLib.buildPackage {
-            inherit src;
+            inherit src nativeBuildInputs;
             inherit (crate) pname;
             cargoExtraArgs = "-p ${crate.pname}";
             CARGO_BUILD_TARGET = muslTarget;
@@ -48,7 +48,7 @@
         # Function to build plugin derivations
         buildPlugin = path:
           let
-            crate = wasmCraneLib.crateNameFromCargoToml { cargoToml = "${path}/Cargo.toml"; };
+            crate = proxyCraneLib.crateNameFromCargoToml { cargoToml = "${path}/Cargo.toml"; };
           in
           wasmCraneLib.buildPackage {
             inherit src;
@@ -81,7 +81,6 @@
           # DAWN proxy and tester binaries
           dawn = buildPackage {
             path = ./dawn;
-            nativeBuildInputs = with pkgs; [ pkg-config ];
           };
 
           # WASM plugins
@@ -100,8 +99,8 @@
             cp ${packages.dawn}/bin/dawn-tester dawn-bundle/bin/
 
             # Copy WASM plugins
-            cp ${packages.doublerPlugin}/lib/*.wasm dawn-bundle/lib/
-            cp ${packages.iqueryPlugin}/lib/*.wasm dawn-bundle/lib/
+            cp ${packages.doublerPlugin}/lib/${packages.doublerPlugin.pname}.wasm dawn-bundle/lib/
+            cp ${packages.iqueryPlugin}/lib/${packages.iqueryPlugin.pname}.wasm dawn-bundle/lib/
 
             # Copy data files
             cp -r ${./data}/* dawn-bundle/data/
