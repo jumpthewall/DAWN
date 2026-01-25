@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-version=$(sed -n 's/^version[[:space:]]*=[[:space:]]*["'"'"']*\([^"'"'"']*\)["'"'"']*/\1/p' Cargo.toml | head -n1)
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+version=$(nix run nixpkgs#python3 -- "$script_dir/get_version.py")
 tag="v$version"
 
 : "${GIT_REMOTE:=origin}"
