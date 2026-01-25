@@ -419,7 +419,7 @@ checksum = "d7a1e2f27636f116493b8b860f5546edb47c8d8f8ea73e1d2a20be88e28d1fea"
 
 [[package]]
 name = "dawn"
-version = "0.1.0"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "clap",
@@ -433,14 +433,14 @@ dependencies = [
 
 [[package]]
 name = "dawn_doubler"
-version = "0.1.0"
+version = "0.1.3"
 dependencies = [
  "wee_alloc",
 ]
 
 [[package]]
 name = "dawn_iquery"
-version = "0.1.0"
+version = "0.1.3"
 dependencies = [
  "wee_alloc",
 ]

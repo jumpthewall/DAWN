@@ -133,7 +133,7 @@ Sets the IQUERY (inverse query) opcode in DNS headers. Some censors don't inspec
 
 ## License
 
-[TODO: Add license]
+This project is licensed under the GNU General Public License v3.0 only - see the [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
