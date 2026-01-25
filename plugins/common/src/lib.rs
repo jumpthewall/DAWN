@@ -34,5 +34,6 @@ pub fn plugin_alloc(size: u32) -> *mut u8 {
 /// }
 /// ```
 pub unsafe fn plugin_dealloc(ptr: *mut u8, size: u32) {
-    let _ = Vec::from_raw_parts(ptr, 0, size as usize);
+    let capacity = usize::try_from(size).expect("plugin_dealloc: size does not fit into usize");
+    let _ = Vec::from_raw_parts(ptr, 0, capacity);
 }
