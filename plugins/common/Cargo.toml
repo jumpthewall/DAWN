@@ -13,6 +13,3 @@ readme = "../README.md"
 
 [lib]
 crate-type = ["rlib"]
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-wee_alloc = "0.4"

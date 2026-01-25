@@ -1,5 +1,3 @@
-#![cfg_attr(target_arch = "wasm32", no_std)]
-
 use dawn_plugin_common::slice;
 
 /// Allocate memory in WASM linear memory
