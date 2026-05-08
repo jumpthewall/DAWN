@@ -26,9 +26,9 @@ path = "src/bin/dawn_tester.rs"
 [dependencies]
 tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "net", "sync", "macros", "time"] }
 anyhow = "1"
-wasmtime = { version = "41", default-features = false, features = ["runtime", "cranelift"] }
+wasmtime = { version = "43", default-features = false, features = ["runtime", "cranelift"] }
 clap = { version = "4", features = ["derive"] }
 hickory-resolver = "0.24"
-hickory-proto = "0.24"
+hickory-proto = "0.26"
 colored = "3"
-rand = { version = "0.8", default-features = false, features = ["std", "std_rng"] }
+rand = { version = "0.10", default-features = false, features = ["std", "std_rng"] }
